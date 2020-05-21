@@ -35,14 +35,14 @@ Example:
 
 ````
 sms_free_fr:
-	user: your login (accepted format example: '12345678')
+    user: your login (accepted format example: '12345678')
     password: <PASSWORD>
 ````
 Full example:
 
 ````
 notify:
-	entries:
+    entries:
         via:
           - sms_free_fr:
               user: '{? free_sms.user ?}'
@@ -73,7 +73,7 @@ other_options:  all parameters youtube-dl can accept
 Examples 1:
 ````
 youtubedl:
-	format: best
+    format: best
     template: {{ title }}.%(ext)s
     path: ~/downloads/
 ````
@@ -81,5 +81,5 @@ youtubedl:
 Example 2:
 ````
 youtubedl:
-	path: 'E:\--DL--\'
+    path: 'E:\--DL--\'
 ````
