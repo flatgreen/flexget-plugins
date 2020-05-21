@@ -34,7 +34,7 @@ class SMSFreeFrNotifier(object):
 
 
     Full example:
-    
+
     notify:
       entries:
         via:

@@ -46,7 +46,6 @@ class PluginJDownloader(object):
 
     """
 
-
     schema = {
         'anyOf': [
             {'type': 'boolean'},

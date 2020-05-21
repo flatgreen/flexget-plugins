@@ -4,7 +4,7 @@ from flexget import plugin
 from flexget.event import event
 from flexget.config_schema import one_or_more
 
-plugin_name = 'log_info';
+plugin_name = 'log_info'
 logger = logger.bind(name=plugin_name)
 
 # version pour flexget 3.

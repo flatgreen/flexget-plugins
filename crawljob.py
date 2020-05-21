@@ -35,7 +35,6 @@ class OutputCrawljob(object):
     - option "--test"
     """
 
-
     schema = {
         'type': 'object',
         'properties': {

@@ -3,9 +3,8 @@ from loguru import logger
 
 from flexget import plugin
 from flexget.event import event
-from flexget.config_schema import one_or_more
 
-plugin_name = 'dir_size';
+plugin_name = 'dir_size'
 logger = logger.bind(name=plugin_name)
 
 
@@ -27,16 +26,14 @@ class PluginDirSize(object):
     """
 
     schema = {'type': 'boolean'}
-    
+
     def on_task_metainfo(self, task, config):
         # check if disabled (value set to false)
         if not config:
             # Config was set to 'no' instead of yes. Don't do anything then.
             return
-        
+
         for entry in task.entries:
-            # If this entry was obtained from the filesystem plugin it should have a filename field. If it does not have
-            # one then there is nothing we can do in this plugin.
             filename = entry.get('filename')
             location = entry.get('location')
             path_loc = Path(location)
@@ -51,8 +48,7 @@ class PluginDirSize(object):
                 if not path_loc.is_dir():
                     continue
             # populate with size
-            entry['dir_size'] = int(sum(f.stat().st_size for f in path_loc.glob('**/*') if f.is_file() )/(1024*1024))
-
+            entry['dir_size'] = int(sum(f.stat().st_size for f in path_loc.glob('**/*') if f.is_file()) / (1024 * 1024))
 
 
 @event('plugin.register')
