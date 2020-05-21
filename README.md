@@ -83,3 +83,15 @@ Example 2:
 youtubedl:
     path: 'E:\--DL--\'
 ````
+
+## log_info
+Write a message (with jinja2 replacement) to the system logging with level=INFO for accepted entries.
+
+Example:
+````
+log_info: a message for the log file !
+````
+Example:
+````
+log_info: 'download: {{ url }}'
+````
