@@ -7,6 +7,23 @@
 - check if all is for the best:
 `flexget check`
 
+## crawljob
+This plugin (base make_html) create a .crawljob file for each accepted entry. This file (.crawljob) is for used with JDownloader2 and the folderwtach system.
+
+The file name is 'title' and there is 'url' in the text file.
+
+Configuration required:
+```
+path: folderwtach directory for the .crawljob files 
+
+(ex : "C:\\Users\\flatgreen\\AppData\\Local\\JDownloader 2.0\\folderwatch")
+````
+
+Example:
+```
+crawljob:
+    path: "{? jd2.watch ?}"
+````
 
 
 ## dir_size
@@ -16,14 +33,15 @@ Example:
 
 ```
 check_dir_size:
-	filesystem:
+    filesystem:
     	path:
-        	- D:\Media\Incoming\series
+            - D:\Media\Incoming\series
         recursive: yes
-	    retrieve: dirs
+        retrieve: dirs
     dir_size: yes
     if:
-    	- dir_size == 0: accept
+        - dir_size == 0: accept
+	...
 ````
 
 ## sms_free_fr
@@ -44,9 +62,9 @@ Full example:
 notify:
     entries:
         via:
-          - sms_free_fr:
-              user: '{? free_sms.user ?}'
-              password: '{? free_sms.password ?}'
+            - sms_free_fr:
+                user: '{? free_sms.user ?}'
+                password: '{? free_sms.password ?}'
 ````
 
 ## youtubedl

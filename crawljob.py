@@ -16,7 +16,7 @@ logger = logger.bind(name=plugin_name)
 class OutputCrawljob(object):
     """
     This plugin (base make_html) create a .crawljob file for each accepted entry.
-    The file name is 'title' and there is 'description' in the text file.
+    The file name is 'title' and there is 'url' in the text file.
     This file (.crawljob) is for used with JDownloader2
 
     Requis :
@@ -28,11 +28,6 @@ class OutputCrawljob(object):
     crawljob:
         path: "{? jd2.watch ?}"
 
-
-    TODO :
-    - make a template ?
-    - check entries (description) ?
-    - option "--test"
     """
 
     schema = {
@@ -53,12 +48,15 @@ class OutputCrawljob(object):
         for entry in task.accepted:
             crawljob_file = pathscrub(entry['title'], filename=True)
             real_output = os.path.join(output, crawljob_file) + '.crawljob'
-            logger.verbose('Writing output crawljob file to %s', real_output)
-            with open(real_output, 'w') as f:
-                f.write('text="{0}"\n'.format(entry['description']))
+            if task.options.test:
+                logger.verbose('Would write output crawljob file to {}', real_output)
+                continue
+            logger.verbose('Writing output crawljob file to {}', real_output)
+            with open(real_output, 'w', encoding='utf-8') as f:
+                f.write('text="{0}"\n'.format(entry['url']))
                 f.write('deepAnalyseEnabled=true\n')
                 f.write('autoStart=true\nautoConfirm=true\n')
-                f.write('packageName={0}\n'.format(entry['title']))
+                f.write('packageName={0}\n'.format(crawljob_file))
 
 
 @event('plugin.register')
