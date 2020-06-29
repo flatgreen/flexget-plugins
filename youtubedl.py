@@ -42,7 +42,7 @@ class PluginYoutubeDL(object):
     path:           Destination path (can be use with 'Set' plugin)
     json:           (true/false) like youtube-dl option 'writeinfojson' without '.info' in filename
     other_options:  all parameters youtube-dl can accept
-                    (see : https://github.com/rg3/youtube-dl/blob/master/youtube_dl/YoutubeDL.py#L129-L279)
+                    (see : https://github.com/rg3/youtube-dl/blob/master/youtube_dl/YoutubeDL.py)
 
     'template' and 'path' support Jinja2 templating on the input entry
 
