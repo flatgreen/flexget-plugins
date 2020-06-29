@@ -7,6 +7,7 @@ from flexget.event import event
 from flexget.utils.template import RenderError
 from flexget.utils.pathscrub import pathscrub
 import os
+import glob
 
 
 log = logging.getLogger('youtubedl')
@@ -17,9 +18,8 @@ log = logging.getLogger('youtubedl')
 
 # TODO:
 # - add descriptions https://flexget.readthedocs.io/en/latest/develop/schemas.html#title-and-description
-# - add examples with 'other_options'
 # - if path doesn't exist check fail (and execute)
-# FIXME OR NOT: youtube-dl fails when falling back to generic download method -> log.error
+# FIXME/REVIEW/TEST OR NOT: youtube-dl fails when falling back to generic download method -> log.error
 
 
 class PluginYoutubeDL(object):
@@ -40,6 +40,7 @@ class PluginYoutubeDL(object):
     format:         Video format code (default: best)
     template:       Output filename template (default: '%(title)s-%(id)s.%(ext)s')
     path:           Destination path (can be use with 'Set' plugin)
+    json:           (true/false) like youtube-dl option 'writeinfojson' without '.info' in filename
     other_options:  all parameters youtube-dl can accept
                     (see : https://github.com/rg3/youtube-dl/blob/master/youtube_dl/YoutubeDL.py#L129-L279)
 
@@ -54,6 +55,8 @@ class PluginYoutubeDL(object):
 
     youtubedl:
         path: 'E:\--DL--\'
+        other_options:
+            writeinfojson: true
     """
 
     schema = {
@@ -65,6 +68,7 @@ class PluginYoutubeDL(object):
             'template': {'type': 'string', 'default': '%(title)s-%(id)s.%(ext)s'},
             'videopassword': {'type': 'string'},
             'path': {'type': 'string', 'format': 'path'},
+            'json': {'type': 'boolean'},
             'other_options': {'type': 'object'}
         },
         'additionalProperties': False
@@ -100,33 +104,36 @@ class PluginYoutubeDL(object):
 
         for entry in task.accepted:
             path = self.prepare_path(entry, config)
+
+            try:
+                # combine to full path + filename
+                outtmpl = os.path.join(path, pathscrub(entry.render(config['template'])))
+                log.debug("Output file: %s" % outtmpl)
+            except RenderError as e:
+                log.error('Error setting output file: %s' % e)
+                entry.fail('Error setting output file: %s' % e)
+
+            # options by default
+            params = {'quiet': True, 'outtmpl': outtmpl, 'logger': log, 'noprogress': True}
+            # with config
+            if 'username' in config and 'password' in config:
+                params.update({'username': config['username'], 'password': config['password']})
+            elif 'username' in config or 'password' in config:
+                log.error('Both username and password is required')
+            if 'videopassword' in config:
+                params.update({'videopassword': config['videopassword']})
+            if 'format' in config:
+                params.update({'format': config['format']})
+            if 'json' in config:
+                params.update({'writeinfojson': config['json']})
+            if config.get('other_options'):
+                params.update(config['other_options'])
+
             if task.options.test:
                 log.info('Would download `%s` in `%s`', entry['title'], path)
+                log.info('options `%s`', params)
             else:
-                try:
-                    # combine to full path + filename
-                    outtmpl = os.path.join(path, pathscrub(entry.render(config['template'])))
-                    log.debug("Output file: %s" % outtmpl)
-                except RenderError as e:
-                    log.error('Error setting output file: %s' % e)
-                    entry.fail('Error setting output file: %s' % e)
-
-                # options by default
-                params = {'quiet': True, 'outtmpl': outtmpl, 'logger': log, 'noprogress': True}
-                # with config
-                if 'username' in config and 'password' in config:
-                    params.update({'username': config['username'], 'password': config['password']})
-                elif 'username' in config or 'password' in config:
-                    log.error('Both username and password is required')
-                if 'videopassword' in config:
-                    params.update({'videopassword': config['videopassword']})
-                if 'format' in config:
-                    params.update({'format': config['format']})
-                if config.get('other_options'):
-                    params.update(config['other_options'])
-
                 log.info('Downloading `%s` in `%s`', entry['title'], path)
-
                 try:
                     with youtube_dl.YoutubeDL(params) as ydl:
                         ydl.download([entry['url']])
@@ -134,6 +141,11 @@ class PluginYoutubeDL(object):
                     entry.fail('Youtube-DL was unable to download the video. Error message %s' % e.message)
                 except Exception as e:
                     entry.fail('Youtube-DL failed. Error message %s' % e.message)
+
+                if config.get('json'):
+                    for json_file in glob.iglob(path + "/*.info.json"):
+                        new_json_file = json_file.replace('.info', '')
+                        os.rename(json_file, new_json_file)
 
 
 @event('plugin.register')
