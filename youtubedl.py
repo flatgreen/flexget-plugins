@@ -1,60 +1,54 @@
-from __future__ import unicode_literals, division, absolute_import
-from builtins import *  # noqa pylint: disable=unused-import, redefined-builtin
-import logging
+from loguru import logger
 
 from flexget import plugin
 from flexget.event import event
 from flexget.utils.template import RenderError
 from flexget.utils.pathscrub import pathscrub
 import os
-import glob
+import importlib
 
-
-log = logging.getLogger('youtubedl')
+logger = logger.bind(name='youtubedl')
 
 # Inspiration :
 # https://github.com/z00nx/flexget-plugins/blob/master/youtubedl.py
 # see discussion : https://github.com/Flexget/Flexget/pull/65
 
-# TODO:
-# - add descriptions https://flexget.readthedocs.io/en/latest/develop/schemas.html#title-and-description
-# - if path doesn't exist check fail (and execute)
-# FIXME/REVIEW/TEST OR NOT: youtube-dl fails when falling back to generic download method -> log.error
-
 
 class PluginYoutubeDL(object):
     """
-    Download videos using YoutubeDL
+    Download videos using youtube-dl or yt-dlp
 
-    This plugin requires the 'youtube-dl' Python module.
+    This plugin requires the 'youtube-dl' or 'yt-dlp' Python module.
     To install the Python module run:
-    'pip install youtube-dl'
+    'pip install youtube-dl' or 'pip install yt-dlp
 
-    Web site : https://github.com/rg3/youtube-dl
+    Web site :
+    https://github.com/rg3/youtube-dl
+    https://github.com/yt-dlp/yt-dlp
+
 
     Configuration:
 
-    username:       Login with this account ID (option)
-    password:       Account password (option)
-    videopassword:  Video password (vimeo, smotri, youku)
-    format:         Video format code (default: best)
+    ytdl_name:      ~youtube downloader: youtube-dl or yt-dlp (default: youtube-dl)
+    format:         Video format code
     template:       Output filename template (default: '%(title)s-%(id)s.%(ext)s')
     path:           Destination path (can be use with 'Set' plugin)
-    json:           (true/false) like youtube-dl option 'writeinfojson' without '.info' in filename
-    other_options:  all parameters youtube-dl can accept
-                    (see : https://github.com/rg3/youtube-dl/blob/master/youtube_dl/YoutubeDL.py)
+    other_options:  all parameters youtube-dl|yt-dlp can accept
+                    https://github.com/ytdl-org/youtube-dl/blob/master/youtube_dl/YoutubeDL.py#L141
+                    https://github.com/yt-dlp/yt-dlp/blob/master/yt_dlp/YoutubeDL.py#L197
 
     'template' and 'path' support Jinja2 templating on the input entry
 
     Examples::
 
     youtubedl:
-        format: best
+        ytdl_name: yt-dlp
         template: {{ title }}.%(ext)s
         path: ~/downloads/
 
     youtubedl:
         path: 'E:\--DL--\'
+        format: '160/18'
         other_options:
             writeinfojson: true
     """
@@ -62,35 +56,37 @@ class PluginYoutubeDL(object):
     schema = {
         'type': 'object',
         'properties': {
-            'username': {'type': 'string'},
-            'password': {'type': 'string'},
-            'format': {'type': 'string', 'default': 'best'},
+            'ytdl_name': {'type': 'string', 'default': 'youtube-dl'},
+            'format': {'type': 'string', 'default': ''},
             'template': {'type': 'string', 'default': '%(title)s-%(id)s.%(ext)s'},
-            'videopassword': {'type': 'string'},
             'path': {'type': 'string', 'format': 'path'},
-            'json': {'type': 'boolean'},
             'other_options': {'type': 'object'}
         },
         'additionalProperties': False
     }
 
+    ytdl_name_to_module = {'youtube-dl': 'youtube_dl', 'yt-dlp': 'yt_dlp'}
+
     def on_task_start(self, task, config):
+        if task.options.learn:
+            return
+        ytdl = config.get('ytdl_name')
         try:
-            import youtube_dl  # NOQA
+            self.ytdl_module_name = self.ytdl_name_to_module[ytdl]
+        except KeyError as e:
+            raise plugin.PluginError('Invalid `ytdl_name` in configuration. KeyError: %s' % e)
+        try:
+            self.ytdl_module = importlib.import_module(self.ytdl_module_name)
         except ImportError as e:
-            log.debug('Error importing YoutubeDL: %s' % e)
-            raise plugin.DependencyError('youtubedl', 'youtubedl',
-                                         'youtubedl module required. ImportError: %s' % e)
+            logger.debug('Error importing YoutubeDL: %s' % e)
+            raise plugin.PluginError('youtube downloader module required. ImportError: %s' % e)
+        logger.info('Plugin YoutubeDL will use: %s' % ytdl)
 
     def prepare_path(self, entry, config):
+        # with 'Set' plugin
         path = entry.get('path', config.get('path'))
         if not isinstance(path, str):
             raise plugin.PluginError('Invalid `path` in entry `%s`' % entry['title'])
-        try:
-            path = entry.render(path)
-        except RenderError as e:
-            entry.fail('Could not set path. Error during string replacement: %s' % e)
-            return
         try:
             path = os.path.expanduser(entry.render(path))
         except RenderError as e:
@@ -99,53 +95,36 @@ class PluginYoutubeDL(object):
         return path
 
     def on_task_output(self, task, config):
-        import youtube_dl.YoutubeDL
-        from youtube_dl.utils import ExtractorError
-
         for entry in task.accepted:
             path = self.prepare_path(entry, config)
-
             try:
-                # combine to full path + filename
                 outtmpl = os.path.join(path, pathscrub(entry.render(config['template'])))
-                log.debug("Output file: %s" % outtmpl)
+                logger.debug("Output file: %s" % outtmpl)
             except RenderError as e:
-                log.error('Error setting output file: %s' % e)
+                logger.error('Error setting output file: %s' % e)
                 entry.fail('Error setting output file: %s' % e)
 
-            # options by default
-            params = {'quiet': True, 'outtmpl': outtmpl, 'logger': log, 'noprogress': True}
-            # with config
-            if 'username' in config and 'password' in config:
-                params.update({'username': config['username'], 'password': config['password']})
-            elif 'username' in config or 'password' in config:
-                log.error('Both username and password is required')
-            if 'videopassword' in config:
-                params.update({'videopassword': config['videopassword']})
+            # ytdl options by default
+            params = {'quiet': True, 'outtmpl': outtmpl, 'logger': logger, 'noprogress': True}
+            # add config to params
             if 'format' in config:
-                params.update({'format': config['format']})
-            if 'json' in config:
-                params.update({'writeinfojson': config['json']})
+                if config['format']:
+                    params.update({'format': config['format']})
             if config.get('other_options'):
                 params.update(config['other_options'])
+            logger.debug(params)
 
             if task.options.test:
-                log.info('Would download `%s` in `%s`', entry['title'], path)
-                log.info('options `%s`', params)
+                logger.info('Would download `{}` in `{}`', entry['title'], path)
             else:
-                log.info('Downloading `%s` in `%s`', entry['title'], path)
+                logger.info('Downloading `{}` in `{}`', entry['title'], path)
                 try:
-                    with youtube_dl.YoutubeDL(params) as ydl:
+                    with self.ytdl_module.YoutubeDL(params) as ydl:
                         ydl.download([entry['url']])
-                except ExtractorError as e:
-                    entry.fail('Youtube-DL was unable to download the video. Error message %s' % e.message)
+                except (self.ytdl_module.utils.ExtractorError, self.ytdl_module.utils.DownloadError) as e:
+                    entry.fail('Youtube downloader error: %s' % e)
                 except Exception as e:
-                    entry.fail('Youtube-DL failed. Error message %s' % e.message)
-
-                if config.get('json'):
-                    for json_file in glob.iglob(path + "/*.info.json"):
-                        new_json_file = json_file.replace('.info', '')
-                        os.rename(json_file, new_json_file)
+                    entry.fail('Youtube downloader failed. Error message: %s' % e)
 
 
 @event('plugin.register')

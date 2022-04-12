@@ -68,44 +68,47 @@ notify:
 ````
 
 ## youtubedl
-Download videos using YoutubeDL.
 
-[Inspiration](https://github.com/z00nx/flexget-plugins/blob/master/youtubedl.py), [discussion](https://github.com/Flexget/Flexget/pull/65)
+Download videos using youtube-dl or yt-dlp
 
-This plugin requires the [youtube-dl](https://github.com/rg3/youtube-dl) Python module. To install the Python module run: `pip install youtube-dl`
+This plugin requires the [youtube-dl](https://github.com/rg3/youtube-dl) or [yt-dlp](https://github.com/yt-dlp/yt-dlp) Python module.
+To install the Python module run:
+```bash
+pip install youtube-dl
+```
+```bash
+pip install yt-dlp
+```
 
 **Configuration:**
 
-````
-username:       Login with this account ID (option)
-password:       Account password (option)
-videopassword:  Video password (vimeo, smotri, youku)
-format:         Video format code (default: best)
+```yaml
+ytdl_name:      youtube dowloader (yt-dlp or youtube-dl (default))
+format:         Video format code
 template:       Output filename template (default: '%(title)s-%(id)s.%(ext)s')
 path:           Destination path (can be use with 'Set' plugin)
-json:           (true/false) like youtube-dl option 'writeinfojson' without '.info' in filename
-other_options:  all parameters youtube-dl can accept
-                (see : https://github.com/rg3/youtube-dl/blob/master/youtube_dl/YoutubeDL.py)
-
-
+other_options:  all parameters from youtube-dl or yt-dlp params
+```
 'template' and 'path' support Jinja2 templating on the input entry
-````
+
+'other_options' see [youtube-dl](https://github.com/ytdl-org/youtube-dl/blob/master/youtube_dl/YoutubeDL.py#L141) or [yt-dlp](https://github.com/yt-dlp/yt-dlp/blob/master/yt_dlp/YoutubeDL.py#L197)
 
 Examples 1:
-````
+```yaml
 youtubedl:
-    format: best
+    ytdl_name: yt-dlp
     template: {{ title }}.%(ext)s
     path: ~/downloads/
-````
+```
 
 Example 2:
-````
+```yaml
 youtubedl:
     path: 'E:\--DL--\'
+    format: '160/18'
     other_options:
         writeinfojson: true
-````
+```
 
 ## log_info
 Write a message (with jinja2 replacement) to the system logging with level=INFO for accepted entries.
