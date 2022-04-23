@@ -29,13 +29,14 @@ class PluginYoutubeDL(object):
 
     Configuration:
 
-    ytdl_name:      ~youtube downloader: youtube-dl or yt-dlp (default: youtube-dl)
+    ytdl_name:      youtube downloader: youtube-dl or yt-dlp (default: youtube-dl)
     format:         Video format code
     template:       Output filename template (default: '%(title)s-%(id)s.%(ext)s')
     path:           Destination path (can be use with 'Set' plugin)
     other_options:  all parameters youtube-dl|yt-dlp can accept
                     https://github.com/ytdl-org/youtube-dl/blob/master/youtube_dl/YoutubeDL.py#L141
                     https://github.com/yt-dlp/yt-dlp/blob/master/yt_dlp/YoutubeDL.py#L197
+                    Pay attention to the differences between these two software.
 
     'template' and 'path' support Jinja2 templating on the input entry
 
@@ -80,7 +81,7 @@ class PluginYoutubeDL(object):
         except ImportError as e:
             logger.debug('Error importing YoutubeDL: %s' % e)
             raise plugin.PluginError('youtube downloader module required. ImportError: %s' % e)
-        logger.info('Plugin YoutubeDL will use: %s' % ytdl)
+        logger.verbose('Plugin YoutubeDL will use: %s' % ytdl)
 
     def prepare_path(self, entry, config):
         # with 'Set' plugin
@@ -99,7 +100,7 @@ class PluginYoutubeDL(object):
             path = self.prepare_path(entry, config)
             try:
                 outtmpl = os.path.join(path, pathscrub(entry.render(config['template'])))
-                logger.debug("Output file: %s" % outtmpl)
+                logger.debug("Output template: %s" % outtmpl)
             except RenderError as e:
                 logger.error('Error setting output file: %s' % e)
                 entry.fail('Error setting output file: %s' % e)
