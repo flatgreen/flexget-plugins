@@ -12,18 +12,16 @@ This plugin (base make_html) create a .crawljob file for each accepted entry. Th
 
 The file name is 'title' and there is 'url' in the text file.
 
-Configuration required:
-```
-path: folderwtach directory for the .crawljob files 
+Configuration required: path
 
-(ex : "C:\\Users\\flatgreen\\AppData\\Local\\JDownloader 2.0\\folderwatch")
-````
-
-Example:
+Examples:
 ```
 crawljob:
-    path: "{? jd2.watch ?}"
-````
+  path: "{? jd2.watch ?}"
+    
+crawljob:    
+  path: "C:\\Users\\flatgreen\\AppData\\Local\\JDownloader 2.0\\folderwatch"
+```
 
 
 ## dir_size
@@ -80,20 +78,25 @@ pip install youtube-dl
 pip install yt-dlp
 ```
 
-**Configuration:**
+Examples with simple configuration:
+```yaml
+youtubedl: <path>   Destination folder path
+```
+
+**Advanced usages with properties configuration::**
 
 ```yaml
-ytdl_name:      youtube dowloader (yt-dlp or youtube-dl (default))
-format:         Video format code
+ytdl_name:      youtube dowloader (yt-dlp (default) or youtube-dl)
+format:         Video format code (default : ytdl downloader default)
 template:       Output filename template (default: '%(title)s-%(id)s.%(ext)s')
-path:           Destination path (can be use with 'Set' plugin)
+path:           Destination path (can be use with 'Set' plugin) - Required 
 other_options:  all parameters from youtube-dl or yt-dlp params
 ```
 'template' and 'path' support Jinja2 templating on the input entry
 
 'other_options' see [youtube-dl](https://github.com/ytdl-org/youtube-dl/blob/master/youtube_dl/YoutubeDL.py#L141) or [yt-dlp](https://github.com/yt-dlp/yt-dlp/blob/master/yt_dlp/YoutubeDL.py#L197)
 
-Examples 1:
+Example:
 ```yaml
 youtubedl:
     ytdl_name: yt-dlp
@@ -101,13 +104,24 @@ youtubedl:
     path: ~/downloads/
 ```
 
-Example 2:
+Example:
 ```yaml
 youtubedl:
     path: 'E:\--DL--\'
     format: '160/18'
     other_options:
         writeinfojson: true
+```
+
+Example with yt-dlp, extract audio::
+```yaml
+youtubedl:
+   path: ~/dowload/
+   format: bestaudio*
+     other_options:
+       postprocessors:
+         - key: FFmpegExtractAudio
+           preferredcodec: best
 ```
 
 ## log_info
