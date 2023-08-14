@@ -25,7 +25,7 @@ crawljob:
 
 
 ## dir_size
-Set the dir_size about directory when the entries come from the filesystem input.
+Set the dir_size about directory when the entries come from the filesystem input. Value in bytes.
 
 Example:
 

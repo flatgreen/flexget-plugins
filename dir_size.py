@@ -10,7 +10,8 @@ logger = logger.bind(name=plugin_name)
 
 class PluginDirSize(object):
     """
-        Set the dir_size about directory when the entries come from the filesystem input.
+        Set the dir_size about directory
+        when the entries come from the filesystem input. Value in bytes.
 
         Example::
 
@@ -48,7 +49,7 @@ class PluginDirSize(object):
                 if not path_loc.is_dir():
                     continue
             # populate with size
-            entry['dir_size'] = int(sum(f.stat().st_size for f in path_loc.glob('**/*') if f.is_file()) / (1024 * 1024))
+            entry['dir_size'] = int(sum(f.stat().st_size for f in path_loc.glob('**/*') if f.is_file()))
 
 
 @event('plugin.register')
