@@ -8,6 +8,7 @@ import os
 import importlib
 import tempfile
 import shutil
+import uuid
 
 logger = logger.bind(name="youtubedl")
 
@@ -151,38 +152,54 @@ class PluginYoutubeDL(object):
         for entry in task.accepted:
             # path is the final path
             path = self.prepare_path(entry, config)
+            
+            # create temp directory in this path
+            tmpdirname = os.path.join(path, str(uuid.uuid4()))
+            logger.debug('dl tmp dir : %s' % tmpdirname)
+            os.makedirs(tmpdirname)
+            shutil.copymode(path, tmpdirname)
 
-            with tempfile.TemporaryDirectory(prefix="ytdl_flexget") as tmpdirname:
+            # prepare outtmpl
+            try:
+                template = pathscrub(entry.render(config["template"])).replace('/', '_')
+                outtmpl = os.path.join(tmpdirname, template)
+                logger.debug("Output full template: %s" % outtmpl)
+            except RenderError as e:
+                logger.error("Error setting output file: %s" % e)
+                # TODO remove tmpdirname ? mieux organiser
+                entry.fail("Error setting output file: %s" % e)
+
+            # ytdl options
+            params = self.prepare_params(config, outtmpl)
+
+            if task.options.test:
+                logger.info("Would download `{}` in `{}`", entry["title"], path)
+            else:
+                logger.info("Downloading `{}` in `{}`", entry["title"], path)
                 try:
-                    outtmpl = os.path.join(
-                        tmpdirname, pathscrub(entry.render(config["template"]))
-                    )
-                    logger.debug("Output full template: %s" % outtmpl)
-                except RenderError as e:
-                    logger.error("Error setting output file: %s" % e)
-                    entry.fail("Error setting output file: %s" % e)
-
-                # ytdl options
-                params = self.prepare_params(config, outtmpl)
-
-                if task.options.test:
-                    logger.info("Would download `{}` in `{}`", entry["title"], path)
+                    with self.ytdl_module.YoutubeDL(params) as ydl:
+                        ydl.download([entry["url"]])
+                except (
+                    self.ytdl_module.utils.ExtractorError,
+                    self.ytdl_module.utils.DownloadError,
+                ) as e:
+                    entry.fail("YoutubeDL downloader error: %s" % e)
+                except Exception as e:
+                    entry.fail("YoutubeDL downloader failed. Error message: %s" % e)
                 else:
-                    logger.info("Downloading `{}` in `{}`", entry["title"], path)
-                    try:
-                        with self.ytdl_module.YoutubeDL(params) as ydl:
-                            ydl.download([entry["url"]])
-                    except (
-                        self.ytdl_module.utils.ExtractorError,
-                        self.ytdl_module.utils.DownloadError,
-                    ) as e:
-                        entry.fail("YoutubeDL downloader error: %s" % e)
-                    except Exception as e:
-                        entry.fail("YoutubeDL downloader failed. Error message: %s" % e)
-
                     # copy all files from tmpdirname to path
                     logger.debug("move from {} to {}", tmpdirname, path)
-                    shutil.copytree(tmpdirname, path, dirs_exist_ok=True)
+                    # shutil.copytree(tmpdirname, path, dirs_exist_ok=True)
+                    # TODO nettoyer, sur rasp c'est copytree
+                    all_files = os.listdir(tmpdirname)
+                    for file_name in all_files:
+                        src = os.path.join(tmpdirname, file_name)
+                        dst = os.path.join(path, file_name)
+                        shutil.copy2(src, dst)
+                        # shutil.copymode(src, dst)
+                finally:
+                    logger.debug("remove ytdl tmp dir")
+                    shutil.rmtree(tmpdirname)
 
 
 @event("plugin.register")

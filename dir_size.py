@@ -10,20 +10,20 @@ logger = logger.bind(name=plugin_name)
 
 class PluginDirSize(object):
     """
-        Set the dir_size about directory
-        when the entries come from the filesystem input. Value in bytes.
+    Set the dir_size about directory
+    when the entries come from the filesystem input. Value in bytes.
 
-        Example::
+    Example::
 
-        check_dir_size:
-            filesystem:
-                path:
-                    - D:\Media\Incoming\series
-                recursive: yes
-                retrieve: dirs
-            dir_size: yes
-        if:
-            - dir_size == 0: accept
+    check_dir_size:
+        filesystem:
+            path:
+                - D:\Media\Incoming\series
+            recursive: yes
+            retrieve: dirs
+        dir_size: yes
+    if:
+        - dir_size == 0: accept
     """
 
     schema = {'type': 'boolean'}

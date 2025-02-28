@@ -62,14 +62,16 @@ class SMSFreeFrNotifier(object):
         notification = {'user': config['user'],
                         'pass': config['password'],
                         'msg': message}
-
-        try:
-            response = requests.get(SMS_SEND_URL, params=notification)
-        except RequestException as e:
-            raise PluginWarning(e.args[0])
+        if task.options.test:
+            logger.verbose('Would send SMS: {}', message)
         else:
-            if not response.status_code == 200:
-                raise PluginWarning(response.text)
+            try:
+                response = requests.get(SMS_SEND_URL, params=notification)
+            except RequestException as e:
+                raise PluginWarning(e.args[0])
+            else:
+                if not response.status_code == 200:
+                    raise PluginWarning(response.text)
 
 
 @event('plugin.register')
